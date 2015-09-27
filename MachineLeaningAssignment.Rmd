@@ -1,0 +1,101 @@
+---
+title: "Prediction Assignment for Machine Learning Course"
+author: "Maiia Bakhova"
+date: "August 23, 2015"
+output: html_document
+---
+
+## Human Activity Recognition
+
+Human Activity Recognition - HAR - has emerged as a key research area in the last years and is gaining increasing attention by the pervasive computing research community (see picture below, that illustrates the increasing number of publications in HAR with wearable accelerometers), especially for the development of context-aware systems. There are many potential applications for HAR, like: elderly monitoring, life log systems for monitoring energy expenditure and for supporting weight-loss programs, and digital assistants for weight lifting exercises.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz3jfosRia6
+
+**Data**
+
+
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. 
+
+The goal of our project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. We may use any of the other variables to predict with. 
+
+We can load both data files and check the data. The last column "classe" contains letters which code the preformance quality. I'll start with loading packages I need.
+
+```{r, cache=TRUE, message=FALSE}
+library(caret); library(e1071);library(randomForest); library(kernlab)
+training=read.csv("pml-training.csv", stringsAsFactors=F)
+testing=read.csv("pml-testing.csv", stringsAsFactors=F)
+dim(training)
+```
+Now we can look at both files more closely. In particular, it is easy to establish that first columns contains names of subjects, days and times of recording and other classifiers which do not represent physical movements. For example the very first "X" column is used to enumerate rows.
+
+```{r}
+names(training)[1:10]
+training$X[1:20]
+```
+Then we have users' names and so on. They should be removed for a predicting model. 
+
+The next step is less obvious: by checking out the "testing" data I've discovered a lot of empty variables which have values in "training" data. Usually they are read as logical with nonexisting values and some as characters.
+We can check the amount of numeric variables in the test set and see that the number of meanful predictors is fewer than 40%.
+```{r}
+sum(sapply(testing, is.numeric))
+
+```
+To maintain the data consistency I will remove non numeric variables from both sets for my work. The new data sets with numeric predictors will be called "trai" and "test", respectfully. In addition we need the "classe" variable to be treated as a factor.
+```{r, cache=TRUE}
+prVec=sapply(testing, is.numeric)
+prVec[1:7]=F
+trai=training[ , prVec]
+test=testing[ , prVec]
+```
+Now let us split the data for cross-validation.
+```{r, cache=TRUE, echo=FALSE}
+inTrain = createDataPartition(y=trai$classe, p=0.7, list=F)
+workTrai=trai[inTrain,]
+valdTrai=trai[-inTrain, ]
+```
+So we reduced the number of predictors to 51. It is still a lot for my laptop, say "random trees" algorithm took 2 hours. Granted my laptop is not a powerful one, but our prediction model is supposes to work across different gadgets. It makes sense to make it less dependable on resourses and to reduce the number of predictors.
+Let us visualize the results and choose variables which show more difference with others.
+```
+```{r, cache=TRUE, results = 'hide'}
+par(mfrow=c(3,4), mar=c(2,2,2,2))
+sapply(workTrai[, 1:12], function(x) boxplot(x~workTrai$classe, col=2:6) )
+```
+Let us concentrate on our goal. We need to find ways to distiguish "A", which is correct way to perform, from others, which represent different mistakes. I'm going to pick up predictors for which distribution of  "A" values is notebly more compact then at least one the variables and it is placed a somehow higher or lower on corresponding plot. For example, boxplots on the picture in the lower right corner fit to this requirement, which corresponds to 12th predictor.
+Sometimes we can have problems with outliners, messing up the whole picture:
+
+I wil not show other boxplots, since I'm not allowed to use more then 5 pictures, and the number of my pictures is questenable already. 
+
+From the observation of plots, 
+it looks like the best variables are "magnet_belt_y" [12], 
+"magnet_belt_z" [13], "gyros_arm_x" [18], "gyros_arm_y" [19], "accel_arm_x" [21], 
+"magnet_arm_x" [24], "magnet_arm_y" [25], magnet_arm_z [26], "roll_dumbbell" [27], 
+"magnet_dumbbell_x" [37], "magnet_dumbbell_y" [38], "roll_forearm" [40] and
+"accel_forearm_y" [48]. 
+Gathering the predictors together with "classe" column:
+```{r, cache=TRUE, results = 'hide'}
+prefVec=c("magnet_belt_y", 
+"magnet_belt_z", "gyros_arm_x", "gyros_arm_y", "accel_arm_x", 
+"magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", 
+"magnet_dumbbell_x", "magnet_dumbbell_y", "roll_forearm",
+"accel_forearm_y", "classe")
+workdf=workTrai[ , prefVec]
+workdf$classe=as.factor(workdf$classe)
+ seed.set=7
+modrf=train(classe~., data=workdf, method="rf")
+```
+Now we can look at the model, see its accuracy, and check how it works on my validation set.
+```{r}
+valddf=valdTrai[, prefVec]
+predictOnVald=predict(modrf, valddf[, -14])
+table(valdTrai$classe, predictOnVald)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
