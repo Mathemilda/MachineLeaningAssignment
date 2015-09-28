@@ -26,7 +26,7 @@ The data for this project come from this source: http://groupware.les.inf.puc-ri
 
 The goal of our project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. We may use any of the other variables to predict with. 
 
-We can load both data files and check the data. The last column "classe" contains letters which code the preformance quality. I'll start with loading packages I need.
+We can load both data files and check the data. The last column "classe" contains letters which code the performance quality. I'll start with loading packages I need.
 
 ```{r, cache=TRUE, message=FALSE}
 library(caret); library(e1071);library(randomForest); library(kernlab)
@@ -42,8 +42,8 @@ training$X[1:20]
 ```
 Then we have users' names and so on. They should be removed for a predicting model. 
 
-The next step is less obvious: by checking out the "testing" data I've discovered a lot of empty variables which have values in "training" data. Usually they are read as logical with nonexisting values and some as characters.
-We can check the amount of numeric variables in the test set and see that the number of meanful predictors is fewer than 40%.
+The next step is less obvious: by checking out the "testing" data I've discovered a lot of empty variables which have values in "training" data. Usually they are read as logical with nonexistent values and some as characters.
+We can check the amount of numeric variables in the test set and see that the number of meaningful predictors is fewer than 40%.
 ```{r}
 sum(sapply(testing, is.numeric))
 
@@ -61,7 +61,7 @@ inTrain = createDataPartition(y=trai$classe, p=0.7, list=F)
 workTrai=trai[inTrain,]
 valdTrai=trai[-inTrain, ]
 ```
-So we reduced the number of predictors to 51. It is still a lot for my laptop, say "random trees" algorithm took 2 hours. Granted my laptop is not a powerful one, but our prediction model is supposes to work across different gadgets. It makes sense to make it less dependable on resourses and to reduce the number of predictors.
+So we reduced the number of predictors to 51. It is still a lot for my laptop, say "random trees" algorithm took 2 hours. Granted my laptop is not a powerful one, but our prediction model is supposes to work across different gadgets. It makes sense to make it less dependable on resources and to reduce the number of predictors.
 Let us visualize the results and choose variables which show more difference with others.
 ```
 ```{r, cache=TRUE, results = 'hide'}
@@ -93,9 +93,10 @@ modrf=train(classe~., data=workdf, method="rf")
 ```
 Now we can look at the model, see its accuracy, and check how it works on my validation set.
 ```{r}
+modrf
 valddf=valdTrai[, prefVec]
 predictOnVald=predict(modrf, valddf[, -14])
+print("Compare predictions on the validation set:")
 table(valdTrai$classe, predictOnVald)
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+As we see on the model data and in the table, our precision is around 95%, which is quite good.
