@@ -23,7 +23,7 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 
 The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. 
 
-The goal of our project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. We may use any of the other variables to predict with. 
+The goal of our project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. The letter "A" stand for the correct performance and other letters ("B", "C", "D", "E") represent different mistakes. We may use any of the other variables for prediction, if they are suitable. 
 
 We can load both data files and check the data. The last column "classe" contains letters which code the performance quality. I'll start with loading packages I need.
 
@@ -41,13 +41,15 @@ training$X[1:20]
 ```
 Then we have users' names and so on. They should be removed for a predicting model. 
 
-The next step is less obvious: by checking out the "testing" data I've discovered a lot of empty variables which have values in "training" data. Usually they are read as logical with nonexistent values and some as characters.
-We can check the amount of numeric variables in the test set and see that the number of meaningful predictors is fewer than 40%.
+### Cleaning data
+
+The next step is less obvious: by checking out the "testing" data I've discovered a lot of empty variables which have mostly undefined values in "training" data. Usually they are read as logical with nonexistent values and some as characters.
+We can check the amount of numeric variables in the test set and see that the number of useful predictors is fewer than 40%.
 ```{r}
 sum(sapply(testing, is.numeric))
 
 ```
-To maintain the data consistency I will remove non numeric variables from both sets for my work. The new data sets with numeric predictors will be called "trai" and "test", respectfully.
+I will remove non numeric variables from the training set for my work together with the first 7 columns. The new data set with numeric predictors will be called "trai". Note that the classifier column "classe" is removed as well.
 ```{r, cache=TRUE}
 prVec=sapply(testing, is.numeric)
 prVec[1:7]=F
@@ -56,11 +58,15 @@ test=testing[ , prVec]
 ```
 Now let us split the data for cross-validation.
 ```{r, cache=TRUE}
+seed.set = 11
 inTrain = createDataPartition(y=trai$classe, p=0.7, list=F)
 workTrai=trai[inTrain,]
 valdTrai=trai[-inTrain, ]
 ```
-So we reduced the number of predictors to 51. It is still a lot for my laptop, say "random trees" algorithm took 2 hours. Granted my laptop is not a powerful one, but our prediction model is supposed to work across different gadgets. It makes sense to make it less dependable on resources and to reduce the number of predictors.
+
+### Choosing predictors
+
+So we reduced the number of predictors to 50. It is still a lot for my laptop, say "random forests" algorithm took 2 hours. Granted my laptop is not a powerful one, but what if our prediction model is supposed to work across different gadgets? It makes sense to make it less dependable on resources and to reduce the number of predictors.
 Let us visualize the results and choose variables which show more difference from others.
 
 ```{r, cache=TRUE, results = 'hide'}
@@ -68,32 +74,59 @@ par(mfrow=c(3,4), mar=c(2,2,2,2))
 sapply(workTrai[, 1:12], function(x) boxplot(x~workTrai$classe, col=2:6) )
 ```
 
-Let us concentrate on our goal. We need to find ways to distinguish type "A", which is a correct way to perform, from others, which represent different mistakes. I'm going to pick up predictors for which their distributions of  "A" values are notably more compact than at least one the variables and it is placed somehow higher or lower on its corresponding plot. For example, box plots on the picture in the lower right corner fit to this requirement, which corresponds to 12th predictor.
-Sometimes we can have problems with outliners, messing up the whole picture.
+We need to find ways to distinguish types of performance, labeled by letters, from each other. I'm going to pick up predictors for which a median for one of types is not in 50% range of another. For example, box plots on the picture in the lower right corner fits to this requirement, which corresponds to 12th predictor.
+My code for this follows.
 
-I will not show other box plots, since I'm not allowed to use more then 5 pictures, and the number of my pictures is questionable already. 
+```{r, cache=TRUE}
+numPred = names(workTrai)
+numPred = numPred[-53] # Removing the "classe" variate
+prefPred = rep(F, length(numPred))
+classe = unique(workTrai[, "classe"])
+# creating a auxilary data frame for storage of medians and quartiles
+predMed = rep(0,5)
+loBnd = rep(0,5)
+upBnd = rep(0,5)
+medns <- data.frame(classe, predMed, loBnd, upBnd)
+for (i in 1:length(numPred)) {
+  for (lett in classe) {
+    medBounds = quantile(workTrai[workTrai[,"classe"] == lett, i], c(.25, .5, .75))
+    medns[medns[,"classe"] == lett, 2] = medBounds[2]
+    medns[medns[,"classe"] == lett, 3] = medBounds[1]
+    medns[medns[,"classe"] == lett, 4] = medBounds[3]
+  }
+  # Now I need to pick up predictors for which a median for one of performance markers
+  # does not fall into a range of another marker.
+  for (k in 1:length(classe)) {
+    others = classe[-k]
+    ind = T
+    for (other in others) {
+      # checking that a median is inside of other range
+      ind = ind &
+        ((medns[k,2] > medns[medns[,"classe"] == other, 3]) & # comparing with lower bound
+           (medns[k,2] < medns[medns[,"classe"] == other, 4]))  # comparing with upper bound
+    }
+  } # marking choosen predictors for removal
+      prefPred[i] <- prefPred[i] | (!ind)
+}
+```
 
-From the observation of plots, 
-it looks like the best variables are "magnet_belt_y" [12], 
-"magnet_belt_z" [13], "gyros_arm_x" [18], "gyros_arm_y" [19], "accel_arm_x" [21], 
-"magnet_arm_x" [24], "magnet_arm_y" [25], magnet_arm_z [26], "roll_dumbbell" [27], 
-"magnet_dumbbell_x" [37], "magnet_dumbbell_y" [38], "roll_forearm" [40] and
-"accel_forearm_y" [48].  In addition we need the "classe" variable to be treated as a factor.
 
 Gathering the predictors together with "classe" column:
 ```{r, cache=TRUE, results = 'hide'}
-prefVec=c("magnet_belt_y", 
-"magnet_belt_z", "gyros_arm_x", "gyros_arm_y", "accel_arm_x", 
-"magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", 
-"magnet_dumbbell_x", "magnet_dumbbell_y", "roll_forearm",
-"accel_forearm_y", "classe")
+prefVec=c(numPred[prefPred], "classe")
 workdf=workTrai[ , prefVec]
 workdf$classe=as.factor(workdf$classe)
 ```
-I will use "random forest" algorithm option from "caret" package. Since it uses random numbers, I need to set up my "random number seed".
+
+### Random forests Algorithm 
+I will use "random forests" algorithm option from "caret" package. It is not necessary to supply any options for this. Since it uses random numbers, I need to set up my "random number seed".
 ```{r, cache=TRUE, results = 'hide'}
- seed.set=7
+ seed.set=11
+library(doParallel)
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
 modrf=train(classe~., data=workdf, method="rf")
+stopCluster(cl)
 ```
 Now we can look at the model, see its accuracy, and check how it works on my validation set. First, the model itself:
 ```{r, message=FALSE}
@@ -101,10 +134,36 @@ modrf
 #
 # Forming the testing subset of training set and computing predictions on :
 valddf=valdTrai[, prefVec]
-predictOnVald=predict(modrf, valddf[, -14])
+predictOnVald=predict(modrf, valddf[, -13])
 ```
-At last, we compare predictions on the validation set:
+And second, we compare predictions on the validation set:
 ```{r}
 table(valdTrai$classe, predictOnVald)
 ```
-As we see on the model data and in the table, our precision is around 95%, which is quite good.
+As we see on the model data and in the table the resulting accuracy is around 96%, which is quite good.
+
+### Graduent boosting method
+
+Now let us check another method. 
+
+```{r, cache=TRUE, results = 'hide', message=FALSE}
+ seed.set=11
+library(doParallel)
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+modgbm=train(classe~., data=workdf, method="gbm")
+stopCluster(cl)
+```
+
+```{r, message=FALSE}
+modgbm
+#
+# Forming the testing subset of training set and computing predictions on :
+valddf=valdTrai[, prefVec]
+predictOnVald=predict(modgbm, valddf[, -13])
+```
+We compare predictions on the validation set as well:
+```{r}
+table(valdTrai$classe, predictOnVald)
+```
+Here the accuracy is 89%, which is lower than for "random forests" algorithm.

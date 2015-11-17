@@ -5,3 +5,9 @@ caret
 e1071
 kernlab
 randomForest
+foreach
+iterators
+doParallel
+survival
+gbm
+plyr
