@@ -11,3 +11,6 @@ doParallel
 survival
 gbm
 plyr
+class
+MASS
+Rmisc

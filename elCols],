@@ -1,0 +1,27 @@
+which(M < 0.1,arr.ind=T)
+which(M < 0.05,arr.ind=T)
+length(which(M < 0.05,arr.ind=T))
+class((which(M < 0.05,arr.ind=T))
+)
+smallCor=which(M < 0.05,arr.ind=T)
+smallCor[, 1]==1
+sum(smallCor[, 1]==1)
+which(smallCor[, 1]==1)
+update.package("caret")
+update.packages("caret")
+?featurePlot
+trai$classe=as.factor(training$classe)
+selCols <- grep("^accel_", names(training));
+featurePlot(x = training[,selCols],
+            y = training$classe,
+            plot = "boxplot");
+featurePlot(x = trai[,selCols],
+ y = training$classe,
+plot = "boxplot");
+selCols <- grep("^accel_", names(trai));
+featurePlot(x = trai[,selCols],
+ y = trai$classe,
+plot = "boxplot");
+selCols <- grep("^magnet_", names(trai));
+history()
+
