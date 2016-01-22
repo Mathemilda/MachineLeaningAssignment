@@ -159,7 +159,7 @@ workdf=workTrai[ , prefVec]
 ```
 
 ### Random Forests Algorithm 
-I will use "random forests" algorithm option from "caret" package. Since it uses random numbers, I need to set up my "random number seed". Then we can look at the model and its accuracy, 
+I will use "random forests" algorithm option from "caret" package. Since it uses random numbers I need to set up my "random number seed". Then we can look at the model and its accuracy, 
 ```{r random_forest, message=FALSE}
 library(caret); library(e1071)
 library(randomForest)
