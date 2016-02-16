@@ -38,14 +38,16 @@ classe E - throwing the hips to the front
 The goal of the project is to predict the manner in which they did the exercise. 
 
 We can load both data files. Note that the testing data table do not have letter classification in its "classe" column and thus it is not not suitable for model computation. It was used for the assignment to check predictions of resulting models. 
-We can immediately 
-check "training" data dimensions. I'll start with loading packages I need.
+Therefore we will be working only with one file.
 
 ```{r, cache=TRUE, message=FALSE}
 training=read.csv("pml-training.csv", stringsAsFactors=F)
 testing=read.csv("pml-testing.csv", stringsAsFactors=F)
 ```
-Now we can look at both files closely. Note that the testing data table do not have letter classification in its "classe" column and thus it is not not suitable for model computation. It was used for the assignment to check predictions of resulting models. At this point we can ignore it and concentrate our efforts on the "training" file.  We can look at number of rows and columns, first 10 column names, and first 20 values of first column and the last "classe" column.
+Now we can look at both files closely. Note that the "testing"" data table do not have letter classification in its "classe" column and thus it is not not suitable for model computation. It was used for the assignment to check predictions of resulting models. At this point we can ignore it and concentrate our efforts on the "training" file. 
+
+We can immediately 
+check "training" data dimensions. We can look at number of rows and columns, first 10 column names, first 20 values of first column,  first 20 entries of some intermediate columns and the last "classe" column.
 
 ```{r}
 dim(training)
@@ -53,6 +55,7 @@ names(training)[1:10]
 training$X[1:20]
 training$new_window[1:20]
 training$num_window[1:20]
+training$classe[1:20]
 ```
 It is easy to establish that some of first columns contain names of subjects, times of recordings and other variables which do not represent physical movements but some researchers' notes. For example the very first "X" column is used to enumerate rows. Then we have users' names and so on. They should be removed for a predicting model. 
 
@@ -116,7 +119,7 @@ sapply(workTrai[, 1:12], function(x) boxplot(x~workTrai$classe, col=2:6) )
 We need to find ways to distinguish types of performance, labeled by letters, from each other. 
 
 I'm going to
-pick up predictors for which a median for one of types is not in middle 50% range of another. For example, we can see such condition satisfied on the picture in the lower right corner fits to this requirement and it corresponds to 12th predictor. I wrote a code choosing predictors this way.
+pick up predictors for which a median for one of types is not in middle 50% range of another. For example, we can see such condition satisfied on the picture in the lower right corner fits to this requirement and it corresponds to 12th predictor. I wrote a code choosing predictors by this rule.
 
 ```{r final_predictors, cache=TRUE}
 numPred = names(workTrai)
@@ -184,7 +187,7 @@ confusionMatrix(valdTrai$classe, predictOnValdRF)
 ```
 As we see on the model data and in the table the resulting accuracy is above 97%, which is quite good.
 
-I have tried other methods as well. Naive Bayes yields not good accuracy, below 70%. Which means that the Bayes Rule formula does not work well on our data. 
+I have tried other methods as well. Naive Bayes yields quite poor accuracy, below 70%. Which means that assumptions for  Bayes algorithms do not work well on our data. I believe that one of the reasons is assuming that variables have normal distribution, which is far from the truth for our data, as it could be seen on density graphs. 
 
 
 ### Gradient Boosting Method

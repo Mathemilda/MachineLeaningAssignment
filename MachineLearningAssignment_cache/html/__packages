@@ -3,14 +3,12 @@ lattice
 ggplot2
 caret
 e1071
-kernlab
+plyr
+Rmisc
 randomForest
+kernlab
 foreach
 iterators
 doParallel
 survival
 gbm
-plyr
-class
-MASS
-Rmisc
